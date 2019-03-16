@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">PayKeep</string>
+    <string name="action_settings">Settings</string>
+    <string name="item_spend">花费项目</string>
+    <string name="money">金额</string>
+    <string name="date">日期</string>
+    <string name="textview">TextView</string>
+</resources>
