@@ -1,5 +1,6 @@
 package com.example.kingqi.paykeep;
 
+import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.support.design.widget.TextInputEditText;
@@ -10,6 +11,7 @@ import android.util.Log;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.ImageButton;
 import android.widget.RadioButton;
 import android.widget.TextView;
@@ -94,6 +96,10 @@ public class EditPay extends SwipeBackActivity {
         });
     }
     private void pickTime(){
+        InputMethodManager inputMethodManager = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (inputMethodManager.isActive()){
+            inputMethodManager.hideSoftInputFromWindow(date.getApplicationWindowToken(),0);
+        }
         TimePickerView timePickerView = new TimePickerBuilder(EditPay.this, new OnTimeSelectListener() {
             @Override
             public void onTimeSelect(Date d, View v) {

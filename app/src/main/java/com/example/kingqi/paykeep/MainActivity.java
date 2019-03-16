@@ -8,9 +8,11 @@ import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.PopupMenu;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
@@ -37,6 +39,8 @@ public class MainActivity extends AppCompatActivity {
     private PayAdapter adapter;
     private TextView sum;
     private FloatingActionButton fab;
+    private int mod = 0;
+    private String ip = "---insert your ip and port like :127.0.0.1:8000----";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -55,7 +59,19 @@ public class MainActivity extends AppCompatActivity {
 
         recyclerView= (RecyclerView)findViewById(R.id.recycler_view);
         adapter = new PayAdapter(pays);
+        adapter.setOnItemClickListener(new PayAdapter.OnItemOnClickListener() {
+            @Override
+            public void onItemOnClick(View view, int pos) {
+                Toast.makeText(MainActivity.this,"长按可删除哦~",Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onItemLongOnClick(View view, int pos) {
+                showPopMenu(view,pos);
+            }
+        });
         recyclerView.setAdapter(adapter);
+
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.addItemDecoration(new DividerItemDecoration(this,DividerItemDecoration.VERTICAL));
         fab = (FloatingActionButton) findViewById(R.id.fab);
@@ -69,6 +85,16 @@ public class MainActivity extends AppCompatActivity {
         });
 
         sum = (TextView)findViewById(R.id.sum);
+        sum.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (mod==0)
+                    mod=1;
+                else
+                    mod = 0;
+                refreshSum();
+            }
+        });
         refreshSum();
     }
 
@@ -94,11 +120,7 @@ public class MainActivity extends AppCompatActivity {
                             .setAction("撤销", new View.OnClickListener() {
                                 @Override
                                 public void onClick(View view) {
-                                    deletePay(pay);
-                                    pays.remove(0);
-                                    adapter.notifyItemRemoved(0);
-                                    recyclerView.scrollToPosition(0);
-                                    LitePal.delete(Pay.class,pay.getId());
+                                    deletePay(pay,0);
                                 }
                             })
                             .show();
@@ -128,7 +150,7 @@ public class MainActivity extends AppCompatActivity {
                         .add("fun",String.valueOf(1))
                         .build();
                 Request request = new Request.Builder()
-                        .url("http://118.25.71.102:10000/add_pay/")
+                        .url("http://"+ip+"/add_pay/")
                         .post(requestBody)
                         .build();
                 try {
@@ -179,7 +201,7 @@ public class MainActivity extends AppCompatActivity {
         }).start();
     }
 
-    private void deletePay(final Pay pay){
+    private void deletePay(final Pay pay,final int pos){
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -195,7 +217,7 @@ public class MainActivity extends AppCompatActivity {
                         .add("fun",String.valueOf(2))
                         .build();
                 Request request = new Request.Builder()
-                        .url("http://118.25.71.102:10000/add_pay/")
+                        .url("http://"+ip+"/add_pay/")
                         .post(requestBody)
                         .build();
                 try {
@@ -206,7 +228,7 @@ public class MainActivity extends AppCompatActivity {
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                Toast.makeText(MainActivity.this,"网络错误",Toast.LENGTH_SHORT).show();
+                                Toast.makeText(MainActivity.this,"啊咧咧~电波无法到达~",Toast.LENGTH_SHORT).show();
                             }
                         });
                     }else {
@@ -214,15 +236,19 @@ public class MainActivity extends AppCompatActivity {
                             runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
+                                    pays.remove(pos);
+                                    adapter.notifyItemRemoved(pos);
+                                    recyclerView.scrollToPosition(pos);
+                                    LitePal.delete(Pay.class,pay.getId());
                                     refreshSum();
-                                    Toast.makeText(MainActivity.this,"撤销成功",Toast.LENGTH_SHORT).show();
+                                    Toast.makeText(MainActivity.this,"消除成功",Toast.LENGTH_SHORT).show();
                                 }
                             });
                         }else {
                             runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
-                                    Toast.makeText(MainActivity.this,"撤销失败",Toast.LENGTH_SHORT).show();
+                                    Toast.makeText(MainActivity.this,"消除失败",Toast.LENGTH_SHORT).show();
                                 }
                             });
                         }
@@ -232,7 +258,7 @@ public class MainActivity extends AppCompatActivity {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            Toast.makeText(MainActivity.this,"网络错误",Toast.LENGTH_SHORT).show();
+                            Toast.makeText(MainActivity.this,"啊咧咧~电波无法到达~",Toast.LENGTH_SHORT).show();
                         }
                     });
                 }
@@ -269,11 +295,35 @@ public class MainActivity extends AppCompatActivity {
     private float getSum(){
         float sum =0;
         for (Pay pay:pays){
-            sum+=pay.getMoney();
+            if (mod==0){
+                if (pay.isPrivate()==false)
+                    sum+=pay.getMoney();
+            }else {
+                if (pay.isPrivate()==true)
+                    sum+=pay.getMoney();
+            }
         }
         return sum;
     }
     private void refreshSum(){
-        sum.setText("总金额:"+String.valueOf(getSum())+"元");
+        sum.setText((mod==0?"日常花费:":"小金库花费:")+String.valueOf(getSum())+"元");
+    }
+    public void showPopMenu(View view,final int pos){
+        PopupMenu popupMenu = new PopupMenu(this,view);
+        popupMenu.getMenuInflater().inflate(R.menu.menu_item,popupMenu.getMenu());
+        popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+            public boolean onMenuItemClick(MenuItem item) {
+                Pay pa = pays.get(pos);
+                deletePay(pa,pos);
+                return false;
+            }
+        });
+        popupMenu.setOnDismissListener(new PopupMenu.OnDismissListener() {
+            @Override
+            public void onDismiss(PopupMenu menu) {
+            }
+        });
+        popupMenu.show();
     }
 }
+

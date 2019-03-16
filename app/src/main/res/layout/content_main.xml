@@ -11,7 +11,7 @@
         android:orientation="horizontal"
         android:layout_width="match_parent"
         android:layout_height="50dp"
-        android:background="#d2cfcf"
+        android:background="#ededed"
         android:id="@+id/linear">
         <TextView
             android:layout_width="0dp"
