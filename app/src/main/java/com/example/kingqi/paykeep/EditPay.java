@@ -1,12 +1,15 @@
 package com.example.kingqi.paykeep;
 
 import android.content.Intent;
+import android.os.Build;
 import android.support.design.widget.TextInputEditText;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.ImageButton;
 import android.widget.RadioButton;
 import android.widget.TextView;
@@ -19,7 +22,9 @@ import com.bigkoo.pickerview.view.TimePickerView;
 import java.util.Calendar;
 import java.util.Date;
 
-public class EditPay extends AppCompatActivity {
+import me.imid.swipebacklayout.lib.app.SwipeBackActivity;
+
+public class EditPay extends SwipeBackActivity {
 
     private TextView date ;
     private TextInputEditText item_spend , money;
@@ -34,8 +39,9 @@ public class EditPay extends AppCompatActivity {
         init();
     }
     private void init(){
+        setSwipeBackEnable(true);
         Toolbar toolbar = (Toolbar)findViewById(R.id.toolbar);
-        toolbar.setTitle("Pay");
+        toolbar.setTitle("Add Pay");
         setSupportActionBar(toolbar);
 
         date=(TextView)findViewById(R.id.date);
@@ -103,5 +109,13 @@ public class EditPay extends AppCompatActivity {
             }
         }).build();
         timePickerView.show();
+    }
+    protected void fitWindows(){
+        Window window = getWindow();//设置系统栏是否适应的
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            window.setFlags(
+                    WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS,
+                    WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+        }
     }
 }

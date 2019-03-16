@@ -1,6 +1,7 @@
 package com.example.kingqi.paykeep;
 
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -11,8 +12,9 @@ import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
-import android.view.Menu;
-import android.view.MenuItem;
+import android.view.Window;
+import android.view.WindowManager;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import org.litepal.LitePal;
@@ -21,8 +23,6 @@ import java.io.IOException;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
-import java.util.Random;
-
 import okhttp3.FormBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -35,16 +35,22 @@ public class MainActivity extends AppCompatActivity {
     private List<Pay> pays = getDataFromDB();
     private RecyclerView recyclerView;
     private PayAdapter adapter;
+    private TextView sum;
     private FloatingActionButton fab;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         init();
+        sync();
     }
 
     private void init(){
+//        fitWindows();
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        Calendar calendar = Calendar.getInstance();
+        int m = calendar.get(Calendar.MONTH)+1;
+        toolbar.setSubtitle(m+"月账单:");
         setSupportActionBar(toolbar);
 
         recyclerView= (RecyclerView)findViewById(R.id.recycler_view);
@@ -61,6 +67,9 @@ public class MainActivity extends AppCompatActivity {
                 startActivityForResult(intent,1);
             }
         });
+
+        sum = (TextView)findViewById(R.id.sum);
+        refreshSum();
     }
 
     @Override
@@ -72,13 +81,14 @@ public class MainActivity extends AppCompatActivity {
                     final Pay pay =(Pay) data.getSerializableExtra("pay");
 
                     pay.setId(LitePal.count(Pay.class)+1);
+                    pay.setUploaded(false);
                     pay.save();
 
                     pays.add(0,pay);
                     adapter.notifyItemInserted(0);
                     recyclerView.scrollToPosition(0);
 
-                    addPay(pay);
+                    addPay(pay,1);
 
                     Snackbar.make(fab,"添加成功",Snackbar.LENGTH_LONG)
                             .setAction("撤销", new View.OnClickListener() {
@@ -96,7 +106,13 @@ public class MainActivity extends AppCompatActivity {
                 }
         }
     }
-    private void addPay(final Pay pay){
+    private void sync(){
+        List<Pay> pays = LitePal.where("uploaded=?","0").find(Pay.class);
+        for (Pay pay:pays){
+            addPay(pay,0);
+        }
+    }
+    private void addPay(final Pay pay,final int n){
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -123,7 +139,8 @@ public class MainActivity extends AppCompatActivity {
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                Toast.makeText(MainActivity.this,"网络错误1",Toast.LENGTH_SHORT).show();
+                                if (n==1)
+                                    Toast.makeText(MainActivity.this,"啊咧咧~下次再上传~",Toast.LENGTH_SHORT).show();
                             }
                         });
                     }else {
@@ -131,14 +148,19 @@ public class MainActivity extends AppCompatActivity {
                             runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
-                                    Toast.makeText(MainActivity.this,"添加成功",Toast.LENGTH_SHORT).show();
+                                    pay.setUploaded(true);
+                                    pay.save();
+                                    refreshSum();
+                                    if (n==1)
+                                        Toast.makeText(MainActivity.this,"添加成功",Toast.LENGTH_SHORT).show();
                                 }
                             });
                         }else {
                             runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
-                                    Toast.makeText(MainActivity.this,"添加失败",Toast.LENGTH_SHORT).show();
+                                    if(n==1)
+                                        Toast.makeText(MainActivity.this,"添加失败",Toast.LENGTH_SHORT).show();
                                 }
                             });
                         }
@@ -148,7 +170,8 @@ public class MainActivity extends AppCompatActivity {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            Toast.makeText(MainActivity.this,"网络错误2",Toast.LENGTH_SHORT).show();
+                            if (n==1)
+                                Toast.makeText(MainActivity.this,"啊咧咧~下次再上传~",Toast.LENGTH_SHORT).show();
                         }
                     });
                 }
@@ -191,6 +214,7 @@ public class MainActivity extends AppCompatActivity {
                             runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
+                                    refreshSum();
                                     Toast.makeText(MainActivity.this,"撤销成功",Toast.LENGTH_SHORT).show();
                                 }
                             });
@@ -216,27 +240,6 @@ public class MainActivity extends AppCompatActivity {
         }).start();
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
-    }
     private void testDB(){
         List<Pay> pays = LitePal.findAll(Pay.class);
         String t="";
@@ -255,7 +258,22 @@ public class MainActivity extends AppCompatActivity {
         Collections.reverse(pays);
         return pays;
     }
-    private void refreshList(){
-
+    protected void fitWindows(){
+        Window window = getWindow();//设置系统栏是否适应的
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            window.setFlags(
+                    WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS,
+                    WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+        }
+    }
+    private float getSum(){
+        float sum =0;
+        for (Pay pay:pays){
+            sum+=pay.getMoney();
+        }
+        return sum;
+    }
+    private void refreshSum(){
+        sum.setText("总金额:"+String.valueOf(getSum())+"元");
     }
 }

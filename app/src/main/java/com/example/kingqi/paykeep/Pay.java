@@ -12,6 +12,15 @@ public class Pay extends LitePalSupport implements Serializable {
     private double money;
     private boolean isPrivate;
     private long id;
+    private boolean uploaded;
+
+    public boolean isUploaded() {
+        return uploaded;
+    }
+
+    public void setUploaded(boolean uploaded) {
+        this.uploaded = uploaded;
+    }
 
     public long getId() {
         return id;
